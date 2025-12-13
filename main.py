@@ -1,41 +1,61 @@
-
 import os
-import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+
 from db import init_db
 from wsmanager import manager
-from routers import auth, pedidos, devices
-import uvicorn
 
-app = FastAPI(title="ERP Corabastos - FastAPI")
+# 🚫 IMPORTANTE: importar routers uno por uno
+from routers.auth import router as auth_router
+from routers.pedidos import router as pedidos_router
+from routers.devices import router as devices_router
 
+app = FastAPI(
+    title="ERP Corabastos",
+    version="1.0.0"
+)
+
+# CORS (permitir frontend web / móvil)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # luego se puede restringir
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Startup: crear tablas
 @app.on_event("startup")
 async def on_startup():
-    # initialize DB (create tables)
     await init_db()
 
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(pedidos.router, prefix="/pedidos", tags=["pedidos"])
-app.include_router(devices.router, prefix="/devices", tags=["devices"])
+# Routers
+app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+app.include_router(pedidos_router, prefix="/pedidos", tags=["Pedidos"])
+app.include_router(devices_router, prefix="/devices", tags=["Devices"])
 
+# WebSocket (actualización en vivo)
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await manager.connect(ws)
     try:
         while True:
-            data = await ws.receive_text()
-            # echo back or ignore; clients listen to broadcasts
+            await ws.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(ws)
 
-if __name__ == '__main__':
-    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get('PORT',5000)), reload=False)
+# Health check simple
+@app.get("/")
+async def root():
+    return {"status": "ERP Corabastos API running"}
+
+# Solo para local (Render ignora esto)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8000)),
+        reload=False
+    )
+
