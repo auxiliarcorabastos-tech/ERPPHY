@@ -3,3 +3,4 @@ uvicorn[standard]
 sqlmodel>=0.0.14
 sqlalchemy>=2.0
 asyncpg
+python-jose[cryptography]
