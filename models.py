@@ -1,4 +1,4 @@
-
+# models.py
 from typing import Optional
 from sqlmodel import SQLModel, Field
 from datetime import datetime
@@ -27,3 +27,4 @@ class Pedido(SQLModel, table=True):
     trans: float = 0.0
     created_at: datetime = Field(default_factory=datetime.utcnow)
     created_by: Optional[int] = Field(default=None, foreign_key="user.id")
+
